@@ -34,12 +34,12 @@ pub fn main() !void {
             const n = std.fmt.parseInt(u8, n_str, 10) catch continue;
             try report.append(n);
         }
-        try reports.append(report);
+        if (report.items.len > 0) try reports.append(report);
     }
 
     var valid: u32 = 0;
     for (reports.items) |report| {
-        if (isSafe(report.items)) {
+        if (isSafeDamped(report.items)) {
             for (report.items) |n| {
                 try stdout.print("{d}, ", .{n});
             }
@@ -67,6 +67,57 @@ pub fn isSafe(report: []const u8) bool {
         prev = n;
     }
     return true;
+}
+
+pub fn isSafeDamped(report: []const u8) bool {
+    if (report.len < 2) return true;
+
+    var damperUsed = false;
+    
+    const sign: i8 = @as(i8, @intCast(report[1])) - @as(i8, @intCast(report[0]));
+    if (sign == 0 or @abs(sign) > 3) damperUsed = true;
+    var prev: u8 = if(damperUsed) report[0] else report[1];
+
+    for (report[2..]) |n| {
+        const diff: i8 = @as(i8, @intCast(n)) - @as(i8, @intCast(prev));
+        const dist = @abs(diff);
+        const failed = dist > 3 or dist == 0 or diff * sign < 0;
+        if (failed) {
+            if (damperUsed) {
+                return false;
+            }
+            damperUsed = true;
+        } else {
+            prev = n;
+        }
+    }
+    return true;
+}
+
+test "isSafeDamped" {
+    // Safe reports
+    {
+        // Real examples
+        const r1 = [_]u8{7, 6, 4, 2, 1};
+        const r2 = [_]u8{1, 3, 6, 7, 9};
+        const r3 = [_]u8{1, 3, 2, 4, 5};
+        const r4 = [_]u8{8, 6, 4, 4, 1};
+
+
+        try expect(isSafeDamped(r1[0..]));
+        try expect(isSafeDamped(r2[0..]));
+        try expect(isSafeDamped(r3[0..]));
+        try expect(isSafeDamped(r4[0..]));
+    }
+
+    //Unsafe reports
+    {
+        const r3 = [_]u8{1, 2, 7, 8, 9};
+        const r4 = [_]u8{9, 7, 6, 2, 1};
+
+        try expect(!isSafeDamped(r3[0..]));
+        try expect(!isSafeDamped(r4[0..]));
+    }
 }
 
 test "isSafe" {
