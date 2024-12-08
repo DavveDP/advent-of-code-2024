@@ -16,61 +16,125 @@ pub fn main() !void {
     const stdin = br.reader();
 
     const input = try stdin.readAllAlloc(allocator, 20000);
-    const sum = subMul(input);
+    const sum = subMulDoDont(input[0..]);
 
     try stdout.print("Sum: {d}\n",.{sum});
     try bw.flush(); // don't forget to flush!
 }
 
-pub fn subMul(str: []const u8) u64 {
-    var iter = MulIterator{.str = str};
+pub fn subMulDoDont(str: []const u8) u64 {
+
+    var mul = MulIterator{.str = str};
+    var do = DoIterator{.str = str};
+    var dont = DontIterator{.str = str};
     var sum: u64 = 0;
-    while(iter.next()) |m| {
-        sum += m.prod();
-        std.debug.print("mul({d},{d})\n", .{m.a, m.b});
+    
+    while(mul.i < str.len - 1) {
+        _ = dont.next();
+        while(mul.next(dont.i)) |m| {
+            sum += m.prod();
+        }
+        do.i = dont.i;
+        _ = do.next();
+        mul.i = do.i;
     }
     return sum;
 }
 
+pub fn subMul(str: []const u8) u64 {
+    var mul = MulIterator{.str = str[0..]};
+    var sum: u64 = 0;
+    while(mul.next(str.len)) |m| {
+        sum += m.prod();
+        //std.debug.print("mul({d},{d})\n", .{m.a, m.b});
+    }
+    return sum;
+}
+
+const DoIterator = struct {
+    i: usize = 0,
+    str: []const u8,
+    fn next(self: *DoIterator) ?bool {
+        while (self.i < self.str.len) {
+            if (self.str[self.i] != 'd') {self.i+=1; continue;} self.i+=1;
+            if (self.str[self.i] != 'o') continue; self.i+=1;
+            if (self.str[self.i] != '(') continue; self.i+=1;
+            if (self.str[self.i] != ')') continue; self.i+=1;
+            return true;
+        }
+        return null;
+    }
+};
+
+const DontIterator = struct {
+    i: usize = 0,
+    str: []const u8,
+    fn next(self: *DontIterator) ?bool {
+        while (self.i < self.str.len) {
+            if (self.str[self.i] != 'd') {self.i+=1; continue;} self.i+=1;
+            if (self.str[self.i] != 'o') continue; self.i+=1;
+            if (self.str[self.i] != 'n') continue; self.i+=1;
+            if (self.str[self.i] != '\'') continue; self.i+=1;
+            if (self.str[self.i] != 't') continue; self.i+=1;
+            if (self.str[self.i] != '(') continue; self.i+=1;
+            if (self.str[self.i] != ')') continue; self.i+=1;
+            return true;
+        }
+        return null;
+    }
+};
+
 const MulIterator = struct {
     i: usize = 0,
     str: []const u8,
-    fn next(self: *MulIterator) ?Mul {
-        var i: usize = self.i;
-        var res: ?Mul = null;
-        while (i < self.str.len) {
-            if (self.str[i] != 'm') {i+=1; continue;} i+=1;
-            if (self.str[i] != 'u') continue; i+=1;
-            if (self.str[i] != 'l') continue; i+=1;
-            if (self.str[i] != '(') continue; i+=1;
+    fn next(self: *MulIterator, max: usize) ?Mul {
+        while (self.i < self.str.len and self.i < max) {
+            if (self.str[self.i] != 'm') {self.i+=1; continue;} self.i+=1;
+            if (self.str[self.i] != 'u') continue; self.i+=1;
+            if (self.str[self.i] != 'l') continue; self.i+=1;
+            if (self.str[self.i] != '(') continue; self.i+=1;
             //std.debug.print("Parsed mul(\n", .{});
-            const intLength = std.mem.indexOf(u8, self.str[i..i + @min(4, self.str.len - 1 - i)], ",") orelse continue;
+            const intLength = std.mem.indexOf(
+                u8, 
+                self.str[self.i..self.i + @min(4, self.str.len - 1 - self.i)],
+                ",") 
+                orelse continue;
             if (intLength == 0) continue;
             //std.debug.print("IntLength {d}\n", .{intLength});
             //std.debug.print("Parsing from index {d} to {d}\n", .{i, i + @min(intLength, self.str.len - 1 - i)});
-            const d1 = std.fmt.parseInt(u16, self.str[i..i + @min(intLength, self.str.len - i)], 10) catch continue;
+            const d1 = std.fmt.parseInt(
+                u16, 
+                self.str[self.i..self.i + @min(intLength, self.str.len - self.i)],
+                10) 
+                catch continue;
             //std.debug.print("Parsed {d}\n", .{d1});
-            i+=intLength;
+            self.i+=intLength;
 
-            if (self.str[i] != ',') continue; i+=1;
+            if (self.str[self.i] != ',') continue; self.i+=1;
             //std.debug.print("Parsed ,\n", .{});
             //std.debug.print("i = {d}\n", .{i});
-            const intLength2 = std.mem.indexOf(u8, self.str[i..i + @min(4, self.str.len - i)], ")") orelse continue;
+            const intLength2 = std.mem.indexOf(
+                u8, 
+                self.str[self.i..self.i + @min(4, self.str.len - self.i)],
+                ")") 
+                orelse continue;
             //std.debug.print("IntLength {d}\n", .{intLength2});
             if (intLength2 == 0) continue;
             //std.debug.print("Parsing from index {d} to {d}\n", .{i, i + @min(intLength2, self.str.len - 1 - i)});
-            const d2 = std.fmt.parseInt(u16, self.str[i..i + @min(intLength2, self.str.len - 1 - i)], 10) catch continue;
+            const d2 = std.fmt.parseInt(
+                u16, 
+                self.str[self.i..self.i + @min(intLength2, self.str.len - 1 - self.i)],
+                10) 
+                catch continue;
             //std.debug.print("Parsed {d}\n", .{d2});
-            i+=intLength2;
+            self.i+=intLength2;
 
-            
-            if (self.str[i] != ')') continue; i+=1;
+
+            if (self.str[self.i] != ')') continue; self.i+=1;
             //std.debug.print("Returning {d} {d}\n", .{d1, d2});
-            res = Mul{.a = d1, .b = d2};
-            break;
+            return Mul{.a = d1, .b = d2};
         }
-        self.i = i;
-        return res;
+        return null;
     }
 };
 
@@ -104,8 +168,34 @@ const Mul = struct {
 //    mul = it.next();
 //    try expect(mul.?.prod() == 23*23);
 //}
+//
 
-test "realExample" {
-    try expect(subMul("xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))") == 161);
+const OneStarInput = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
+const TwoStarInput = "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))";
+
+test "1star" {
+    try expect(subMul(OneStarInput) == 161);
+}
+
+test "DoIter" {
+    var do = DoIterator{.str = TwoStarInput};
+    const first = do.next();
+    const second = do.next();
+    try expect(do.i == TwoStarInput.len);
+    try expect(first.?);
+    try expect(second == null);
+}
+
+test "DontIter" {
+    var dont = DontIterator{.str = TwoStarInput};
+    const first = dont.next();
+    const second = dont.next();
+    try expect(dont.i == TwoStarInput.len);
+    try expect(first.?);
+    try expect(second == null);
+}
+
+test "2star" {
+    try expect(subMulDoDont(TwoStarInput) == 48);
 }
 
