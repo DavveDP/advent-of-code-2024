@@ -22,22 +22,51 @@ pub fn main() !void {
         i+=1;
     }
 
-    var count: u64 = 0;
-    for (m, 0..) |_, j| {
-        count += xmasCount(m[0..], 0, j, 1, 0); //hori
-        count += xmasCount(m[0..], j, 0, 0, 1); //vert
-        count += xmasCount(m[0..], 0, j, 1, 1); //diag-down
-        if (j != 0) count += xmasCount(m[0..], j, 0, 1, 1); //diag-down
-        count += xmasCount(m[0..], 0, m.len - 1 - j, 1, -1); //diag-up
-        if (j != 0) count += xmasCount(m[0..], j, m.len - 1, 1, -1); //diag-up
-    }
+    const count = xMasSquareCount(m[0..]);
 
     try stdout.print("Count: {d}\n", .{count});
 
     try bw.flush(); // don't forget to flush!
 }
 
-pub fn xmasCount(m: []const []const u8, sx: usize, sy: usize, dx: i8, dy: i8) u64 {
+pub fn xMasSquareCount(m: []const []const u8) u64 {
+    var count: u64 = 0;
+    for(m[0..m.len - 2], 0..) |_, i| {
+        for(m[0..m.len - 2], 0..) |_, j| {
+            if (isXmasSquare([_][3]u8 {
+                m[i][j..][0..3].*,
+                m[i+1][j..][0..3].*,
+                m[i+2][j..][0..3].*,
+                })) {
+                count+=1;
+            }
+        }
+    }
+    return count;
+}
+
+pub fn isXmasSquare(m: [3][3]u8) bool {
+    const d = [_]u8 {m[0][0], m[1][1], m[2][2]};
+    const u = [_]u8 {m[0][2], m[1][1], m[2][0]};
+    return 
+        (std.mem.eql(u8, d[0..], "SAM") or std.mem.eql(u8, d[0..], "MAS")) and
+        (std.mem.eql(u8, u[0..], "SAM") or std.mem.eql(u8, u[0..], "MAS"));
+}
+
+pub fn xmasStringCount(m: []const []const u8) u64 {
+    var count: u64 = 0;
+    for (m, 0..) |_, j| {
+        count += _xmasStringCount(m[0..], 0, j, 1, 0); //hori
+        count += _xmasStringCount(m[0..], j, 0, 0, 1); //vert
+        count += _xmasStringCount(m[0..], 0, j, 1, 1); //diag-down
+        if (j != 0) count += _xmasStringCount(m[0..], j, 0, 1, 1); //diag-down
+        count += _xmasStringCount(m[0..], 0, m.len - 1 - j, 1, -1); //diag-up
+        if (j != 0) count += _xmasStringCount(m[0..], j, m.len - 1, 1, -1); //diag-up
+    }
+    return count;
+}
+
+pub fn _xmasStringCount(m: []const []const u8, sx: usize, sy: usize, dx: i8, dy: i8) u64 {
     var x = sx; var y = sy;
     var count: u64 = 0;
     outer: while(y < m.len and x < m[y].len) {
@@ -57,13 +86,38 @@ pub fn xmasCount(m: []const []const u8, sx: usize, sy: usize, dx: i8, dy: i8) u6
         y = @intCast(@as(i16, @intCast(y)) + dy);
     }
 
-    return count;
+           return count;
+}
+
+test "xmas" {
+    const m: [3][3]u8 = [_][3]u8 {
+        "M.S".*,
+        ".A.".*,
+        "M.S".*,
+    };
+    try expect(isXmasSquare(m));
+}
+
+test "xmasCount" {
+    const m: []const []const u8 = &.{
+        ".M.S......",
+        "..A..MSMS.",
+        ".M.S.MAA..",
+        "..A.ASMSM.",
+        ".M.S.M....",
+        "..........",
+        "S.S.S.S.S.",
+        ".A.A.A.A..",
+        "M.M.M.M.M.",
+        "..........",
+    };
+    try expect(xMasSquareCount(m) == 9);
 }
 
 test "xmasCount-hori" {
     //const t: []const u8 = "test";
     const m: []const []const u8 = &.{"XMASXMASAMX"};
-    try expect(xmasCount(m, 0, 0, 1, 0) == 3);
+    try expect(_xmasStringCount(m, 0, 0, 1, 0) == 3);
 }
 
 test "xmasCount-vert" {
@@ -80,8 +134,8 @@ test "xmasCount-vert" {
         "..M.M.M.MM",
         ".X.X.XMASX",
     };
-    try expect(xmasCount(m, 9, 0, 0, 1) == 2);
-    try expect(xmasCount(m, 0, 9, 1, 0) == 1);
-    try expect(xmasCount(m, 3, 9, -1, -1) == 1);
-    try expect(xmasCount(m, 5, 9, 1, -1) == 1);
+    try expect(_xmasStringCount(m, 9, 0, 0, 1) == 2);
+    try expect(_xmasStringCount(m, 0, 9, 1, 0) == 1);
+    try expect(_xmasStringCount(m, 3, 9, -1, -1) == 1);
+    try expect(_xmasStringCount(m, 5, 9, 1, -1) == 1);
 }
